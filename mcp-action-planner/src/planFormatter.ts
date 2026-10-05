@@ -38,7 +38,8 @@ export interface FormatterInput {
 
 function buildExecutionPlan(
   graph: DependencyGraph,
-  triggerMeta: TriggerMetadata | undefined
+  triggerMeta: TriggerMetadata | undefined,
+  connectorName: string
 ): ExecutionStep[] {
   const steps: ExecutionStep[] = [];
   let stepCounter = 1;
@@ -60,6 +61,7 @@ function buildExecutionPlan(
       kind: "trigger",
       action: triggerMeta.summary.label,
       actionId: triggerMeta.summary.id,
+      connectorName,
       purpose: "Workflow entry point — fires when the event occurs",
       inputs: {},
       ...(Object.keys(triggerOutputMappings).length > 0
@@ -108,6 +110,7 @@ function buildExecutionPlan(
       kind: "action",
       action: actionName,
       actionId: node.actionId,
+      connectorName,
       ...(purpose ? { purpose } : {}),
       inputs,
       ...(outputs ? { outputs } : {}),
@@ -194,7 +197,7 @@ function buildHumanReadable(
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export function buildAnalysisResult(input: FormatterInput): AnalysisResult {
-  const executionPlan = buildExecutionPlan(input.graph, input.triggerMeta);
+  const executionPlan = buildExecutionPlan(input.graph, input.triggerMeta, input.app.name);
 
   const humanReadable = buildHumanReadable(input.request, executionPlan, input.issues);
 

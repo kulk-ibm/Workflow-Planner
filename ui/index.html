@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workflow Planner — Action Planner</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: #f0f2f5;
+      color: #1f2328;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #1c2b4a;
+      color: #fff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header svg { flex-shrink: 0; }
+    header h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.01em; }
+    header span { font-size: 13px; color: #94a3b8; margin-left: 8px; }
+
+    /* ── Main layout ── */
+    main {
+      flex: 1;
+      max-width: 900px;
+      width: 100%;
+      margin: 32px auto;
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── Prompt card ── */
+    .prompt-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 20px 24px;
+    }
+    .prompt-card label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #57606a;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    textarea {
+      width: 100%;
+      min-height: 96px;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.6;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+      color: #1f2328;
+    }
+    textarea:focus { border-color: #3b82d4; box-shadow: 0 0 0 3px rgba(59,130,212,0.12); }
+
+    .prompt-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .examples { display: flex; gap: 8px; flex-wrap: wrap; }
+    .example-btn {
+      font-size: 12px;
+      padding: 4px 10px;
+      border: 1px solid #d0d7de;
+      border-radius: 20px;
+      background: #f7f8fa;
+      cursor: pointer;
+      color: #57606a;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .example-btn:hover { border-color: #3b82d4; background: #eff6ff; color: #3b82d4; }
+
+    .btn-analyze {
+      margin-left: auto;
+      background: #1c2b4a;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 9px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .btn-analyze:hover { background: #2d4270; }
+    .btn-analyze:disabled { background: #94a3b8; cursor: not-allowed; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result area ── */
+    #result { display: none; flex-direction: column; gap: 16px; }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .status-bar.resolvable   { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .status-bar.ambiguous    { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+    .status-bar.unresolvable { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .status-bar.error        { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+    /* ── Section cards ── */
+    .section {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .section-header {
+      padding: 12px 20px;
+      background: #f7f8fa;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #57606a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-body { padding: 16px 20px; }
+
+    /* ── App + trigger row ── */
+    .meta-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .meta-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f0f2f5;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+    .meta-chip .label { color: #57606a; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .meta-chip .value { font-weight: 600; color: #1f2328; }
+    .meta-chip .id-val { font-size: 11px; color: #57606a; font-family: monospace; }
+
+    /* ── Execution plan ── */
+    /* ── Flow diagram ── */
+    .plan-steps { display: flex; flex-direction: column; align-items: center; gap: 0; }
+
+    .flow-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      padding: 2px 0;
+    }
+    .flow-arrow-line {
+      width: 2px;
+      height: 22px;
+      background: #c7d0db;
+    }
+    .flow-arrow-head {
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid #c7d0db;
+    }
+
+    .step {
+      width: 100%;
+      border-radius: 10px;
+      border: 1.5px solid #e5e7eb;
+      background: #fff;
+      overflow: hidden;
+    }
+    .kind-unknown.step { border-style: dashed; }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .kind-unknown .step-header { background: #f9fafb; }
+
+    .step-circle {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      color: #fff;
+    }
+    .kind-unknown .step-circle { background: #9ca3af; }
+
+    /* connector name chip in step header */
+    .connector-chip {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      white-space: nowrap;
+      border: 1px solid transparent;
+      margin-left: 2px;
+    }
+
+    .step-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1f2328;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .step-title .kind-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .kind-unknown .kind-badge { background: #f3f4f6; color: #6b7280; }
+
+    .step-content { padding: 10px 14px 12px; }
+    .step-id { font-size: 11px; color: #57606a; font-family: monospace; margin-bottom: 6px; }
+    .step-purpose { font-size: 12px; color: #57606a; margin-bottom: 8px; font-style: italic; }
+
+    .io-grid { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+    .io-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .io-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 6px;
+      border-radius: 3px;
+      white-space: nowrap;
+      margin-top: 1px;
+    }
+    .io-label.out     { background: #fef9c3; color: #854d0e; }
+    .io-label.direct  { background: #dbeafe; color: #1e40af; }
+    .io-label.missing { background: #fee2e2; color: #991b1b; }
+    .io-label.resolved { background: #dcfce7; color: #166534; }
+    code {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 11px;
+      background: #f7f8fa;
+      border: 1px solid #e5e7eb;
+      border-radius: 3px;
+      padding: 1px 5px;
+      color: #1f2328;
+    }
+    .arrow { color: #94a3b8; font-size: 12px; }
+
+    /* ── Classified Inputs ── */
+    .input-list { display: flex; flex-direction: column; gap: 6px; }
+    .input-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      background: #f7f8fa;
+    }
+    .input-row.missing { background: #fff5f5; border-color: #fca5a5; }
+    .input-row.resolved { background: #f0fdf4; border-color: #bbf7d0; }
+    .input-meta { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .input-title { font-weight: 600; color: #1f2328; }
+    .input-path  { font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; color: #57606a; }
+    .input-resolved-by { font-size: 11px; color: #166534; margin-top: 2px; }
+
+    /* ── Issues ── */
+    .issue-list { display: flex; flex-direction: column; gap: 8px; }
+    .issue-item {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      font-size: 13px;
+      color: #991b1b;
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      border-radius: 6px;
+      padding: 8px 12px;
+    }
+
+    /* ── Error state ── */
+    .error-msg {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      border-radius: 8px;
+      padding: 14px 18px;
+      color: #991b1b;
+      font-size: 14px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #94a3b8;
+      border-top: 1px solid #e5e7eb;
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="28" height="28" rx="6" fill="#3b82d4"/>
+    <path d="M7 14h4m6 0h4M11 14a3 3 0 106 0 3 3 0 00-6 0z" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="7" cy="9" r="2" fill="#7c5cd8"/>
+    <circle cx="21" cy="9" r="2" fill="#7c5cd8"/>
+    <path d="M7 9v5M21 9v5" stroke="#7c5cd8" stroke-width="1.5" stroke-dasharray="2 2"/>
+  </svg>
+  <h1>Workflow Planner</h1>
+  <span>Action Planner</span>
+</header>
+
+<main>
+
+  <!-- Prompt Card -->
+  <div class="prompt-card">
+    <label for="prompt">Describe your workflow</label>
+    <textarea id="prompt" placeholder="e.g. When new task is created in Asana in workspace &quot;ABC&quot;, add label to card in Trello board b15"></textarea>
+    <div class="prompt-actions">
+      <div class="examples">
+        <button class="example-btn" data-prompt="When new task is created in Asana in workspace &quot;ABC&quot;, add label to card in Trello board b15">Asana → Trello</button>
+        <button class="example-btn" data-prompt="When a board is updated in Trello, post message to channel &quot;General&quot; in Slack">Trello → Slack</button>
+        <button class="example-btn" data-prompt="When a new file is uploaded in Box in folder &quot;/abc&quot;, download the file and upload it in Dropbox &quot;/123&quot;">Box → Dropbox</button>
+        <button class="example-btn" data-prompt="When task is updated in Asana in workspace &quot;ABC&quot;, upload a file in Box &quot;/ab&quot; and post a message in Slack channel &quot;General&quot; with message &quot;File created&quot;">Asana → Box + Slack</button>
+      </div>
+      <button class="btn-analyze" id="analyzeBtn">
+        <div class="spinner" id="spinner"></div>
+        <span id="btnLabel">Analyze</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div id="result"></div>
+
+</main>
+
+<footer>Made with IBM Bob</footer>
+
+<script>
+  const API_URL = "http://localhost:4000/analyze";
+
+  // Example buttons
+  document.querySelectorAll(".example-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById("prompt").value = btn.dataset.prompt;
+      const resultEl = document.getElementById("result");
+      resultEl.style.display = "none";
+      resultEl.innerHTML = "";
+    });
+  });
+
+  // Analyze button
+  document.getElementById("analyzeBtn").addEventListener("click", analyze);
+  document.getElementById("prompt").addEventListener("keydown", e => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) analyze();
+  });
+
+  async function analyze() {
+    const prompt = document.getElementById("prompt").value.trim();
+    if (!prompt) return;
+
+    const btn = document.getElementById("analyzeBtn");
+    const spinner = document.getElementById("spinner");
+    const btnLabel = document.getElementById("btnLabel");
+    const resultEl = document.getElementById("result");
+
+    btn.disabled = true;
+    spinner.style.display = "block";
+    btnLabel.textContent = "Analyzing…";
+    resultEl.style.display = "none";
+    resultEl.innerHTML = "";
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request: prompt })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        renderError(data.error || "Server error");
+      } else {
+        renderResult(data);
+      }
+    } catch (err) {
+      renderError("Could not reach the server at " + API_URL + ". Is it running? (npm run start:ui)");
+    } finally {
+      btn.disabled = false;
+      spinner.style.display = "none";
+      btnLabel.textContent = "Analyze";
+    }
+  }
+
+  function renderError(msg) {
+    const el = document.getElementById("result");
+    el.innerHTML = `<div class="error-msg">⚠ ${escHtml(msg)}</div>`;
+    el.style.display = "flex";
+  }
+
+  function renderResult(data) {
+    const el = document.getElementById("result");
+    el.innerHTML = "";
+    el.style.display = "flex";
+
+    // Status bar
+    const status = data.status || "error";
+    const statusIcon = { resolvable: "✅", ambiguous: "⚠️", unresolvable: "❌", error: "❌" }[status] || "❓";
+    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+    const sb = div("status-bar " + status);
+    sb.innerHTML = `${statusIcon} &nbsp;<strong>Status: ${escHtml(statusLabel)}</strong>`;
+    el.appendChild(sb);
+
+    // Application + trigger meta
+    const metaSection = makeSection("🔌 Application & Trigger");
+    const metaRow = div("meta-row");
+
+    if (data.application?.name) {
+      const chip = div("meta-chip");
+      chip.innerHTML = `<div><div class="label">Connector</div><div class="value">${escHtml(data.application.name)}</div><div class="id-val">${escHtml(data.application.appId || "")}</div></div>`;
+      metaRow.appendChild(chip);
+    }
+
+    if (data.triggerAction?.name) {
+      const chip = div("meta-chip");
+      chip.innerHTML = `<div><div class="label">Trigger</div><div class="value">${escHtml(data.triggerAction.name)}</div><div class="id-val">${escHtml(data.triggerAction.triggerId || "")}</div></div>`;
+      metaRow.appendChild(chip);
+    }
+
+    if (data.primaryAction?.name) {
+      const chip = div("meta-chip");
+      chip.innerHTML = `<div><div class="label">Primary Action</div><div class="value">${escHtml(data.primaryAction.name)}</div><div class="id-val">${escHtml(data.primaryAction.actionId || "")}</div></div>`;
+      metaRow.appendChild(chip);
+    }
+
+    metaSection.querySelector(".section-body").appendChild(metaRow);
+    el.appendChild(metaSection);
+
+    // Issues
+    if (data.issues && data.issues.length > 0) {
+      const issSection = makeSection("❌ Issues");
+      const list = div("issue-list");
+      data.issues.forEach(issue => {
+        const item = div("issue-item");
+        item.innerHTML = `<span>⚠</span><span>${escHtml(issue)}</span>`;
+        list.appendChild(item);
+      });
+      issSection.querySelector(".section-body").appendChild(list);
+      el.appendChild(issSection);
+    }
+
+    // Classified Inputs
+    if (data.classifiedInputs && data.classifiedInputs.length > 0) {
+      const ciSection = makeSection("🔍 Classified Inputs");
+      const list = div("input-list");
+      // Deduplicate by fieldPath+fieldTitle to avoid showing channel_type.channel three times
+      const seen = new Set();
+      data.classifiedInputs.forEach(ci => {
+        const key = ci.fieldPath + "|" + ci.fieldTitle;
+        if (seen.has(key)) return;
+        seen.add(key);
+
+        const isMissing = ci.status === "MISSING";
+        const isResolved = ci.status === "RESOLVABLE_BY_ACTION" || ci.status === "RESOLVABLE_BY_USER";
+        const rowCls = isMissing ? "input-row missing" : isResolved ? "input-row resolved" : "input-row";
+        const row = div(rowCls);
+
+        const badge = isMissing
+          ? `<span class="io-label missing">MISSING</span>`
+          : `<span class="io-label resolved">RESOLVED</span>`;
+
+        const resolvedBy = ci.resolvedByAction
+          ? `<div class="input-resolved-by">↩ via <strong>${escHtml(ci.resolvedByAction)}</strong> → <code>${escHtml(ci.resolvedByOutputPath || "")}</code></div>`
+          : "";
+
+        row.innerHTML = `
+          ${badge}
+          <div class="input-meta">
+            <div class="input-title">${escHtml(ci.fieldTitle || ci.fieldPath)}</div>
+            <div class="input-path">${escHtml(ci.fieldPath)}</div>
+            ${resolvedBy}
+          </div>`;
+        list.appendChild(row);
+      });
+      ciSection.querySelector(".section-body").appendChild(list);
+      el.appendChild(ciSection);
+    }
+
+    // Execution plan
+    if (data.executionPlan && data.executionPlan.length > 0) {
+      const planSection = makeSection("📋 Execution Plan");
+      const steps = div("plan-steps");
+
+      // ── Per-action color palette ───────────────────────────────────────────
+      // Each unique action (step) gets its own distinct color so that FROM badges
+      // on downstream steps visually trace back to the exact source step.
+      // Index 0 = trigger (purple). Non-trigger actions start at index 1.
+      // Palette: [border, headerBg, circleBg, chipBg, chipText, chipBorder, fromBg, fromText]
+      const ACTION_PALETTES = [
+        ["#c4b5fd", "#f5f3ff", "#7c5cd8", "#ede9fe", "#7c5cd8", "#c4b5fd", "#f0ebff", "#7c5cd8"], // 0 purple  — trigger
+        ["#fda4af", "#fff1f2", "#dc2626", "#fee2e2", "#991b1b", "#fda4af", "#fff5f5", "#dc2626"], // 1 red
+        ["#fdba74", "#fff7ed", "#c2410c", "#ffedd5", "#9a3412", "#fdba74", "#fff4ea", "#c2410c"], // 2 orange
+        ["#6ee7b7", "#f0fdf4", "#059669", "#d1fae5", "#065f46", "#6ee7b7", "#e4faf2", "#059669"], // 3 green
+        ["#93c5fd", "#eff6ff", "#2563eb", "#dbeafe", "#1e40af", "#93c5fd", "#e8f1ff", "#2563eb"], // 4 blue
+        ["#fcd34d", "#fffbeb", "#b45309", "#fef3c7", "#92400e", "#fcd34d", "#fffce8", "#b45309"], // 5 amber
+        ["#a5b4fc", "#eef2ff", "#4338ca", "#e0e7ff", "#3730a3", "#a5b4fc", "#edf0ff", "#4338ca"], // 6 indigo
+        ["#67e8f9", "#ecfeff", "#0e7490", "#cffafe", "#164e63", "#67e8f9", "#e5fdff", "#0e7490"], // 7 cyan
+        ["#d8b4fe", "#faf5ff", "#9333ea", "#f3e8ff", "#6b21a8", "#d8b4fe", "#f8f0ff", "#9333ea"], // 8 violet
+        ["#86efac", "#f0fdf4", "#16a34a", "#dcfce7", "#166534", "#86efac", "#e8fdf0", "#16a34a"], // 9 emerald
+      ];
+
+      // Assign palette index per action name, in plan order.
+      // Trigger always gets index 0 (purple). Supporting/primary actions get the
+      // next available color from the palette so each card is visually distinct.
+      const actionPaletteMap = new Map(); // action label → palette index
+      let paletteCounter = 0;
+      data.executionPlan.forEach(step => {
+        if (!actionPaletteMap.has(step.action)) {
+          if (step.kind === "trigger") {
+            actionPaletteMap.set(step.action, 0);
+            if (paletteCounter === 0) paletteCounter = 1; // reserve 0 for trigger
+          } else {
+            // Start non-trigger colors from index 1 (blue), skip 0 if not yet used
+            if (paletteCounter === 0) paletteCounter = 1;
+            actionPaletteMap.set(step.action, paletteCounter % ACTION_PALETTES.length);
+            paletteCounter++;
+          }
+        }
+      });
+
+      function getPalette(actionName) {
+        const idx = actionPaletteMap.get(actionName) ?? 1;
+        return ACTION_PALETTES[idx % ACTION_PALETTES.length];
+      }
+
+      data.executionPlan.forEach((step, idx) => {
+        // Arrow connector between steps
+        if (idx > 0) {
+          const arrow = div("flow-arrow");
+          arrow.innerHTML = `<div class="flow-arrow-line"></div><div class="flow-arrow-head"></div>`;
+          steps.appendChild(arrow);
+        }
+
+        const kind = step.kind || "action";
+        const connName = step.connectorName || "";
+        const pal = kind !== "unknown"
+          ? getPalette(step.action)
+          : ["#e5e7eb","#f9fafb","#9ca3af","#f3f4f6","#6b7280","#d1d5db","#f3f4f6","#6b7280"];
+        const [borderColor, headerBg, circleBg, chipBg, chipText, chipBorder] = pal;
+
+        const stepEl = div("step kind-" + kind);
+        stepEl.style.borderColor = borderColor;
+        if (kind === "unknown") stepEl.style.borderStyle = "dashed";
+
+        // Header row: circle + action name + kind badge + connector chip
+        const header = div("step-header");
+        header.style.background = headerBg;
+
+        const circle = div("step-circle");
+        circle.textContent = step.step;
+        circle.style.background = circleBg;
+        header.appendChild(circle);
+
+        const titleEl = div("step-title");
+        // Action name text node
+        const nameNode = document.createElement("span");
+        nameNode.style.fontWeight = "700";
+        nameNode.style.color = "#1f2328";
+        nameNode.textContent = step.action;
+        titleEl.appendChild(nameNode);
+
+        // Kind badge
+        const badgeLabel = kind === "trigger" ? "Trigger" : kind === "unknown" ? "Not Registered" : "Action";
+        const badge = span("kind-badge", badgeLabel);
+        badge.style.background = chipBg;
+        badge.style.color = chipText;
+        titleEl.appendChild(badge);
+
+        // Connector name chip
+        if (connName) {
+          const chip = span("connector-chip", connName);
+          chip.style.background = chipBg;
+          chip.style.color = chipText;
+          chip.style.borderColor = chipBorder;
+          titleEl.appendChild(chip);
+        }
+
+        header.appendChild(titleEl);
+        stepEl.appendChild(header);
+
+        // Body
+        const content = div("step-content");
+
+        if (step.actionId) {
+          const idEl = div("step-id");
+          idEl.textContent = step.actionId;
+          content.appendChild(idEl);
+        }
+
+        if (step.purpose) {
+          const purp = div("step-purpose");
+          purp.textContent = step.purpose;
+          content.appendChild(purp);
+        }
+
+        const ioGrid = div("io-grid");
+
+        // Direct inputs (user-supplied values)
+        const directEntries = Object.entries(step.inputs || {}).filter(([, v]) => !String(v).includes("."));
+        directEntries.forEach(([k, v]) => {
+          const row = div("io-row");
+          row.innerHTML = `<span class="io-label direct">INPUT</span><code>${escHtml(k)}</code><span class="arrow">=</span><code>"${escHtml(String(v))}"</code>`;
+          ioGrid.appendChild(row);
+        });
+
+        // Resolved inputs — FROM badge color matches the source step's card color
+        const resolvedEntries = Object.entries(step.inputs || {}).filter(([, v]) => String(v).includes("."));
+        resolvedEntries.forEach(([k, v]) => {
+          // v is like "Search Cards.cards[].board_id" — the action name is everything
+          // before the first dot. Action names can contain spaces so we find the
+          // first dot that is NOT inside brackets (i.e. the schema path separator).
+          const raw = String(v);
+          // Find the split point: first '.' that separates action name from field path
+          // Action names never contain '.', so the first '.' is always the boundary.
+          const dotIdx = raw.indexOf(".");
+          const sourceAction = dotIdx !== -1 ? raw.slice(0, dotIdx) : raw;
+          const srcPal = getPalette(sourceAction);
+
+          const row = div("io-row");
+          const fromLabel = document.createElement("span");
+          fromLabel.className = "io-label";
+          fromLabel.textContent = "FROM";
+          fromLabel.style.background = srcPal[6]; // fromBg — same hue as source card
+          fromLabel.style.color      = srcPal[7]; // fromText
+          row.appendChild(fromLabel);
+          const rest = document.createElement("span");
+          rest.innerHTML = `<code>${escHtml(k)}</code><span class="arrow"> ← </span><code>${escHtml(raw)}</code>`;
+          row.appendChild(rest);
+          ioGrid.appendChild(row);
+        });
+
+        // Outputs this step provides
+        Object.entries(step.outputs || {}).forEach(([k, v]) => {
+          const row = div("io-row");
+          row.innerHTML = `<span class="io-label out">PROVIDES</span><code>${escHtml(k)}</code><span class="arrow">→</span><code>${escHtml(String(v))}</code>`;
+          ioGrid.appendChild(row);
+        });
+
+        if (ioGrid.children.length > 0) content.appendChild(ioGrid);
+        stepEl.appendChild(content);
+        steps.appendChild(stepEl);
+      });
+
+      planSection.querySelector(".section-body").appendChild(steps);
+      el.appendChild(planSection);
+    }
+
+    // Scroll into view
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function div(cls) {
+    const el = document.createElement("div");
+    if (cls) el.className = cls;
+    return el;
+  }
+  function span(cls, text) {
+    const el = document.createElement("span");
+    if (cls) el.className = cls;
+    if (text) el.textContent = text;
+    return el;
+  }
+  function makeSection(title) {
+    const section = div("section");
+    const header = div("section-header");
+    header.textContent = title;
+    const body = div("section-body");
+    section.appendChild(header);
+    section.appendChild(body);
+    return section;
+  }
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+</script>
+</body>
+</html>

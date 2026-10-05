@@ -30,7 +30,9 @@ export function parseTriggerPattern(request) {
         "add", "create", "update", "delete", "remove", "rename", "move", "copy",
         "archive", "unarchive", "invite", "post", "send", "get", "search",
         "list", "fetch", "assign", "attach", "detach", "set", "close", "resolve",
-        "acknowledge", "accept", "decline", "publish",
+        "acknowledge", "accept", "decline", "publish", "upload", "download",
+        "import", "export", "sync", "notify", "comment", "complete", "submit",
+        "approve", "reject", "lock", "unlock", "share", "transfer", "convert",
     ];
     const verbAlternation = actionStarterVerbs.join("|");
     // Patterns (evaluated in order — most specific first):
@@ -164,7 +166,9 @@ function splitActionClauses(actionClause) {
         "add", "create", "update", "delete", "remove", "rename", "move", "copy",
         "archive", "unarchive", "invite", "post", "send", "get", "search",
         "list", "fetch", "assign", "attach", "detach", "set", "close", "resolve",
-        "acknowledge", "accept", "decline",
+        "acknowledge", "accept", "decline", "publish", "upload", "download",
+        "import", "export", "sync", "notify", "comment", "complete", "submit",
+        "approve", "reject", "lock", "unlock", "share", "transfer", "convert",
     ];
     // Split on " and " (case-insensitive), then re-join any segments that don't
     // start with an action verb back to the previous segment.
@@ -400,6 +404,10 @@ function scanConnectorNames(text) {
  * Given a sub-clause and a list of candidate connector names (in priority order),
  * return the connector name explicitly present in the sub-clause,
  * or fall back to the first candidate.
+ *
+ * If no registered candidate matches, attempt to extract an unregistered app name
+ * from the sub-clause text (e.g. "AMQP", "RabbitMQ") so that a placeholder step
+ * is shown in the execution plan instead of silently routing to the wrong connector.
  */
 function assignSubClauseConnector(subClause, candidates) {
     const lower = subClause.toLowerCase();
@@ -409,17 +417,43 @@ function assignSubClauseConnector(subClause, candidates) {
         if (lower.includes(name.toLowerCase()))
             return name;
     }
+    // No registered connector matched — try to extract an unregistered app name
+    // from the sub-clause so we can inject a "not registered" placeholder step.
+    // Look for known unregistered hints: all-caps words (e.g. AMQP, IBM MQ, MQTT)
+    // or PascalCase words that aren't common English verbs/nouns.
+    const actionStopWords = new Set([
+        "a", "an", "the", "in", "on", "to", "for", "with", "and", "or",
+        "publish", "post", "send", "upload", "download", "create", "update",
+        "delete", "get", "add", "remove", "set", "fetch", "list", "search",
+        "message", "file", "folder", "channel", "queue", "topic", "event",
+        "new", "same", "then", "when", "it", "its", "this", "that",
+    ]);
+    // Strip quoted strings (e.g. member "IUG Demo", label "My Label") before
+    // scanning for unregistered connector names — quoted values are entity names,
+    // not application names, and their capitalised words must not be mistaken for
+    // an unregistered connector (e.g. "IUG" from "IUG Demo").
+    const subClauseNoQuotes = subClause.replace(/["""']([^"""']+)["""']/g, " ");
+    // Match all-caps tokens (min 2 chars) or PascalCase tokens
+    const candidates2 = subClauseNoQuotes.match(/\b([A-Z][A-Z0-9]{1,}|[A-Z][a-z]+[A-Z][A-Za-z]*)\b/g) ?? [];
+    for (const token of candidates2) {
+        if (!actionStopWords.has(token.toLowerCase())) {
+            return token; // return as an unregistered connector name
+        }
+    }
     return candidates[0];
 }
 async function loadConnectorContext(nameHint, overallIntentTokens) {
     // Primary connector (used for trigger resolution + as the representative app)
     const connector = await getConnector(nameHint);
-    // Fetch ALL action-capable app IDs for this name (e.g. Box has 3 entries,
-    // 2 of which have interactionTypes: ["actions"]). Merge their action lists
-    // so no actions are missed just because they live in a different app record.
+    // Fetch ALL action-capable app IDs for this name.
+    // getAllActionConnectors now always returns every platform record found by
+    // name-based search PLUS the pinned appId from connectors.json (if any and
+    // not already present). This covers all cases:
+    //   - Connectors with multiple UUID records (Asana, Slack, …)
+    //   - Connectors with a separate stable ID (e.g. Box → wm.box)
     const allActionConnectors = await getAllActionConnectors(nameHint);
     const actionArrays = await Promise.all(allActionConnectors.map((c) => c.interactionTypes.includes("actions")
-        ? getActions(c.id)
+        ? getActions(c.id).catch(() => [])
         : Promise.resolve([])));
     // Deduplicate by action id — keep the first occurrence and track which
     // app ID owns each action so schema fetches go to the right endpoint.
@@ -435,9 +469,12 @@ async function loadConnectorContext(nameHint, overallIntentTokens) {
             }
         }
     }
-    // Triggers come from the primary connector only
+    // Triggers come from the primary connector only.
+    // Use triggerId if the trigger-capable record has a different ID than the
+    // action-capable record (e.g. Asana may expose triggers under a separate app ID).
+    const triggerAppId = connector.triggerId ?? connector.id;
     const triggerSummaries = connector.interactionTypes.includes("triggers")
-        ? await getTriggers(connector.id).catch(() => [])
+        ? await getTriggers(triggerAppId).catch(() => [])
         : [];
     const dataSourcePrefixes = ["search", "get", "list", "find", "fetch", "lookup", "query"];
     const dataSourceSummaries = actionSummaries.filter((a) => dataSourcePrefixes.some((p) => a.label.toLowerCase().startsWith(p)));
@@ -540,7 +577,9 @@ export async function analyzeRequest(request) {
             ? triggerParsed.intentTokens
             : tokenize(triggerClause);
         const rankedTriggers = rankActionsByIntent(triggerIntentTokens, triggerCtx.triggerSummaries);
-        resolvedTriggerMeta = await loadTriggerMetadata(triggerCtx.connector.id, rankedTriggers[0]);
+        const triggerFetchId = triggerCtx.connector.triggerId
+            ?? triggerCtx.connector.id;
+        resolvedTriggerMeta = await loadTriggerMetadata(triggerFetchId, rankedTriggers[0]);
     }
     // ── Step 6: Resolve global entity values ─────────────────────────────────
     const globalEntityValues = new Map([
@@ -550,18 +589,30 @@ export async function analyzeRequest(request) {
     // ── Step 7: Resolve each action sub-clause against its connector ──────────
     const subResults = await Promise.all(actionSubClauses.map((subClause, idx) => {
         const connName = subClauseConnectorNames[idx];
-        const ctx = contextMap.get(connName) ?? triggerCtx;
+        const ctx = contextMap.get(connName);
         if (!ctx) {
-            // Fallback error result for this sub-clause
+            // Connector not registered — inject a visible placeholder step so the
+            // execution plan still shows where this action belongs in the flow.
+            const issue = `Connector "${connName}" is not registered. Add it to connectors.json to enable action resolution.`;
             return Promise.resolve({
-                status: "error",
+                status: "unresolvable",
                 application: { name: connName, appId: "" },
                 request: subClause,
                 primaryAction: null,
                 classifiedInputs: [],
-                executionPlan: [],
-                issues: [`Connector "${connName}" could not be loaded.`],
-                humanReadable: `Error: Connector "${connName}" could not be loaded.`,
+                executionPlan: [
+                    {
+                        step: 1,
+                        kind: "unknown",
+                        action: `${connName}: (action not resolved)`,
+                        actionId: "",
+                        connectorName: connName,
+                        purpose: `Connector "${connName}" is not registered — cannot resolve action`,
+                        inputs: {},
+                    },
+                ],
+                issues: [issue],
+                humanReadable: `Error: ${issue}`,
             });
         }
         return resolveOneAction(subClause, ctx.connector, ctx.actionSummaries, resolvedTriggerMeta, globalEntityValues, ctx.sharedPool);

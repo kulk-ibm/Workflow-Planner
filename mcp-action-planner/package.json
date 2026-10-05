@@ -9,8 +9,10 @@
   },
   "files": ["build"],
   "scripts": {
-    "build": "tsc && chmod 755 build/index.js",
-    "dev": "tsc --watch"
+    "build": "tsc && chmod 755 build/index.js && chmod 755 build/server.js",
+    "dev": "tsc --watch --preserveWatchOutput",
+    "start:ui": "node --import ./build/loadConfig.js build/server.js",
+    "start:ui:watch": "node --watch --import ./build/loadConfig.js build/server.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

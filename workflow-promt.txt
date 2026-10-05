@@ -1,24 +1,27 @@
 
 
-When new task is created in asana in workspace "ABC"
-add label to card in board b15.
+
+===============. Working. ===============
+
+When a board is created in Trello, then Add Board Member to Card, use the member "IUG Demo"
+
+When a new task is created in Asana in workspace "ABC," add a label to the card in board b15 in Trello
+
+When a board is updated in Trello, post a message to the "General" in Slack
+
+When a new file is uploaded to the box in the folder "/abc", download the file from box and upload the same file to Dropbox "/1232"
 
 
-When a board in updated in trello
-Post Message To Channel "General" in Slack
-
-
-When new task is created in asana in workspace "ABC"
-add label to card in board b15.
-
-
-new file uploaded in box publish message in Queue "ABC" in AMQP 
-
-
-when a new file uploaded in box in folder "/abc", 
-download the file and upload the same file in Dropbox "/123"
+When a task is updated in Asana in workspace "ABC" upload a file in box "/ab" and  post a message in Slack channel "General" with message "File created"
 
 
 
-When task is updated in asana in workspace "ABC" upload a file in box "/ab" and 
-post a message in slack channel "General" with message "File created - {Filename}"
+
+
+
+
+
+==============================
+
+When a new file is uploaded in the Box, in AMQP publish a message in the Queue "Q1"
+

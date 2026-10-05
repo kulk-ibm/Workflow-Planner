@@ -188,19 +188,47 @@ export function rankActionsByIntent(intentTokens, actions) {
         "a", "an", "the", "to", "in", "on", "using", "via", "for", "with",
         "of", "from", "into", "at", "by", "and", "or", "but",
     ]);
+    // Synonym map: user verb → action label verbs it is equivalent to.
+    // Expands intentTokens so e.g. "download" matches actions labelled "get" or "fetch".
+    const VERB_SYNONYMS = {
+        download: ["get", "fetch", "download", "retrieve", "export"],
+        upload: ["upload", "create", "add", "import", "put"],
+        get: ["get", "fetch", "retrieve", "download"],
+        fetch: ["fetch", "get", "retrieve", "download"],
+        retrieve: ["retrieve", "get", "fetch", "download"],
+        send: ["send", "post", "publish", "create"],
+        post: ["post", "send", "create", "publish"],
+        create: ["create", "add", "new", "insert", "post"],
+        add: ["add", "create", "insert", "append"],
+        remove: ["remove", "delete", "archive"],
+        delete: ["delete", "remove", "archive"],
+        update: ["update", "edit", "modify", "set", "patch"],
+        edit: ["edit", "update", "modify"],
+        search: ["search", "find", "list", "query", "lookup"],
+        find: ["find", "search", "get", "list", "lookup"],
+        list: ["list", "search", "find", "query"],
+    };
+    // Build expanded intent set including synonyms for any verb tokens
     const intentSet = new Set(intentTokens);
+    const expandedIntentSet = new Set(intentTokens);
+    for (const token of intentTokens) {
+        const synonyms = VERB_SYNONYMS[token];
+        if (synonyms)
+            synonyms.forEach((s) => expandedIntentSet.add(s));
+    }
     const intentNorm = intentTokens.join(" ");
     function score(action) {
         const labelTokens = tokenize(action.label);
         const descTokens = tokenize(action.description);
         // Label tokens without stop words — aligned with intentTokens
         const labelCoreTokens = labelTokens.filter((t) => !intentStopWords.has(t));
-        // Base Jaccard over label + description
-        let s = jaccard(intentTokens, [...labelTokens, ...descTokens]);
-        // Boost 1: label core tokens are covered by the intent tokens
-        // e.g. intent = ["add","board","member","card"] fully covers label core ["add","board","member","card"]
+        // Base Jaccard over label + description (using expanded intent set for synonyms)
+        const expandedIntentArr = [...expandedIntentSet];
+        let s = jaccard(expandedIntentArr, [...labelTokens, ...descTokens]);
+        // Boost 1: label core tokens are covered by the intent tokens (with synonyms)
+        // e.g. intent ["download","file"] expands to cover label core ["get","file"]
         const labelCoreSet = new Set(labelCoreTokens);
-        const labelInIntent = [...labelCoreSet].filter((t) => intentSet.has(t)).length;
+        const labelInIntent = [...labelCoreSet].filter((t) => expandedIntentSet.has(t)).length;
         const labelCoverage = labelCoreSet.size > 0 ? labelInIntent / labelCoreSet.size : 0;
         s += labelCoverage * 0.3;
         // Boost 2: label core tokens (stop-word-stripped) appear as a contiguous
@@ -208,6 +236,14 @@ export function rankActionsByIntent(intentTokens, actions) {
         const labelCoreNorm = labelCoreTokens.join(" ");
         if (labelCoreNorm && intentNorm.includes(labelCoreNorm))
             s += 0.4;
+        // Penalty: label contains tokens that have NO overlap with the expanded intent.
+        // This prevents "Get File Comments" beating "Get File" when intent is ["download","file"] —
+        // "comments" is present in the label but absent from intent, reducing its score.
+        const labelExtraTokens = labelCoreTokens.filter((t) => !expandedIntentSet.has(t));
+        const extraRatio = labelCoreTokens.length > 0
+            ? labelExtraTokens.length / labelCoreTokens.length
+            : 0;
+        s -= extraRatio * 0.25;
         return s;
     }
     return [...actions].sort((a, b) => score(b) - score(a));

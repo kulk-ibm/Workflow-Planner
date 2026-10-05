@@ -229,16 +229,23 @@ export async function getConnector(nameHint: string): Promise<ConnectorInfo> {
   const cached = appCache.get(cacheKey) as unknown as ConnectorInfo | undefined;
   if (cached) return cached;
 
-  // If a pinned appId exists in connectors.json, fetch that app directly
+  // If a pinned appId exists in connectors.json, try to fetch that app directly.
+  // If the pinned ID is not found on this environment, fall through to name-based search.
   const pinnedId = getPinnedAppId(nameHint);
   if (pinnedId) {
-    const data = await apiGet<unknown>(`/apis/v2/rest/applications/${encodeURIComponent(pinnedId)}`);
-    const arr = (Array.isArray(data) ? data : [data]) as Record<string, unknown>[];
-    if (!arr.length) throw new Error(`Connector "${nameHint}" (appId: ${pinnedId}) not found`);
-    const connector = parseConnectorInfo(arr[0]);
-    (appCache as TtlCache<unknown>).set(cacheKey, connector);
-    (appCache as TtlCache<unknown>).set(`connector:${pinnedId.toLowerCase()}`, connector);
-    return connector;
+    try {
+      const data = await apiGet<unknown>(`/apis/v2/rest/applications/${encodeURIComponent(pinnedId)}`);
+      const arr = (Array.isArray(data) ? data : [data]) as Record<string, unknown>[];
+      if (arr.length) {
+        const connector = parseConnectorInfo(arr[0]);
+        (appCache as TtlCache<unknown>).set(cacheKey, connector);
+        (appCache as TtlCache<unknown>).set(`connector:${pinnedId.toLowerCase()}`, connector);
+        return connector;
+      }
+      // arr is empty — fall through to name-based search below
+    } catch {
+      // Pinned ID not available on this environment — fall through to name-based search
+    }
   }
 
   // Match hint against connectors.json to get the canonical spelling
@@ -257,47 +264,81 @@ export async function getConnector(nameHint: string): Promise<ConnectorInfo> {
   const connector =
     all.find((c) => c.interactionTypes.includes("actions")) ?? all[0];
 
+  // Merge interactionTypes from all records so trigger-capable variants are
+  // not lost when the primary connector was chosen for its "actions" capability.
+  const mergedTypes = Array.from(
+    new Set(all.flatMap((c) => c.interactionTypes))
+  ) as InteractionType[];
+  const mergedConnector: ConnectorInfo = { ...connector, interactionTypes: mergedTypes };
+
+  // If no record has "triggers" but another has a distinct ID that does,
+  // also store the trigger-capable record's ID so getTriggers uses the right endpoint.
+  const triggerRecord = all.find((c) => c.interactionTypes.includes("triggers"));
+  if (triggerRecord && triggerRecord.id !== connector.id) {
+    (mergedConnector as ConnectorInfo & { triggerId?: string }).triggerId = triggerRecord.id;
+  }
+
   // Cache under both the hint and the canonical name
-  (appCache as TtlCache<unknown>).set(cacheKey, connector);
+  (appCache as TtlCache<unknown>).set(cacheKey, mergedConnector);
   if (registeredName) {
     (appCache as TtlCache<unknown>).set(
       `connector:${registeredName.toLowerCase()}`,
-      connector
+      mergedConnector
     );
   }
 
-  return connector;
+  return mergedConnector;
 }
 
 /**
  * Returns ALL action-capable ConnectorInfo records for a name hint.
- * When a pinned appId exists (connectors.json object entry), returns only
- * that single record — no multi-ID search needed.
- * Otherwise queries by name and returns all action-capable records.
+ *
+ * Always performs the name-based multi-record search so every platform app
+ * record for this connector is included (e.g. Asana, Slack, Box each have
+ * multiple UUIDs on some environments). If a pinned appId is set in
+ * connectors.json AND it is not already in the name-based results, it is
+ * appended as an extra source so its actions are also fetched and merged.
+ *
+ * This ensures rankActionsByIntent scores against the full combined action
+ * catalogue regardless of how many platform records a connector has.
  */
 export async function getAllActionConnectors(nameHint: string): Promise<ConnectorInfo[]> {
   const cacheKey = `all-connectors:${nameHint.toLowerCase()}`;
   const cached = appCache.get(cacheKey) as unknown as ConnectorInfo[] | undefined;
   if (cached) return cached;
 
-  // Pinned appId — fetch the single known record directly
-  const pinnedId = getPinnedAppId(nameHint);
-  if (pinnedId) {
-    const connector = await getConnector(nameHint); // already cached after getConnector()
-    const result = [connector];
-    (appCache as TtlCache<unknown>).set(cacheKey, result);
-    return result;
-  }
-
   const registeredName = matchConnectorName(nameHint);
   const lookupName = registeredName ?? nameHint;
 
+  // ── Name-based search: returns all platform records for this connector ──
   const data = await apiGet<unknown>(`/apis/v2/rest/applications/${encodeURIComponent(lookupName)}`);
   const arr = (Array.isArray(data) ? data : [data]) as Record<string, unknown>[];
-
   const all = arr.map(parseConnectorInfo);
   const actionCapable = all.filter((c) => c.interactionTypes.includes("actions"));
-  const result = actionCapable.length > 0 ? actionCapable : all.slice(0, 1);
+  const fromName: ConnectorInfo[] = actionCapable.length > 0 ? actionCapable : all.slice(0, 1);
+
+  // ── Pinned ID: if set and not already in the name results, include it ──
+  // Some connectors have a well-known stable app ID (e.g. "wm.box") whose
+  // /actions endpoint returns actions not present on any UUID record. The
+  // application-lookup endpoint may return [] for the pinned ID on some
+  // environments, so we represent it as a synthetic stub with kind "actions"
+  // so getActions(pinnedId) is called during the merge in loadConnectorContext.
+  const pinnedId = getPinnedAppId(nameHint);
+  const alreadyIncluded = fromName.some((c) => c.id === pinnedId);
+  const fromPinned: ConnectorInfo[] =
+    pinnedId && !alreadyIncluded
+      ? [
+          {
+            id: pinnedId,
+            name: lookupName,
+            label: lookupName,
+            description: "",
+            interactionTypes: ["actions"],
+          } as ConnectorInfo,
+        ]
+      : [];
+
+  const result = [...fromName, ...fromPinned];
 
   (appCache as TtlCache<unknown>).set(cacheKey, result);
   return result;

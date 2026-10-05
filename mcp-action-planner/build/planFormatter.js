@@ -8,7 +8,7 @@
  * Supports both action-only and trigger-driven workflows.
  */
 // ─── Build execution plan steps ──────────────────────────────────────────────
-function buildExecutionPlan(graph, triggerMeta) {
+function buildExecutionPlan(graph, triggerMeta, connectorName) {
     const steps = [];
     let stepCounter = 1;
     // Step 0 (shown as step 1): Trigger entry point for trigger-driven workflows
@@ -27,6 +27,7 @@ function buildExecutionPlan(graph, triggerMeta) {
             kind: "trigger",
             action: triggerMeta.summary.label,
             actionId: triggerMeta.summary.id,
+            connectorName,
             purpose: "Workflow entry point — fires when the event occurs",
             inputs: {},
             ...(Object.keys(triggerOutputMappings).length > 0
@@ -69,6 +70,7 @@ function buildExecutionPlan(graph, triggerMeta) {
             kind: "action",
             action: actionName,
             actionId: node.actionId,
+            connectorName,
             ...(purpose ? { purpose } : {}),
             inputs,
             ...(outputs ? { outputs } : {}),
@@ -136,7 +138,7 @@ function buildHumanReadable(request, executionPlan, issues) {
 }
 // ─── Main export ──────────────────────────────────────────────────────────────
 export function buildAnalysisResult(input) {
-    const executionPlan = buildExecutionPlan(input.graph, input.triggerMeta);
+    const executionPlan = buildExecutionPlan(input.graph, input.triggerMeta, input.app.name);
     const humanReadable = buildHumanReadable(input.request, executionPlan, input.issues);
     return {
         status: input.status,

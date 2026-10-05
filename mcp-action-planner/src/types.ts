@@ -117,10 +117,12 @@ export interface DependencyGraph {
 
 export interface ExecutionStep {
   step: number;
-  /** "trigger" | "action" */
-  kind: "trigger" | "action";
+  /** "trigger" | "action" | "unknown" (connector not registered) */
+  kind: "trigger" | "action" | "unknown";
   action: string;
   actionId: string;
+  /** Human-readable name of the connector that owns this action/trigger */
+  connectorName?: string;
   purpose?: string;
   inputs: Record<string, string>;
   /** Maps output field path → "TargetAction.inputFieldPath" */

@@ -32,6 +32,32 @@ import { scoreMatch, MATCH_THRESHOLD, tokenize } from "./schemaMatcher.js";
  * never be satisfied directly from a user's natural-language input.
  * These fields must always be resolved via a supporting action.
  */
+/**
+ * True when a field is a connection-level credential (OAuth token, API key, etc.)
+ * that is configured by the user when they connect the app — not a workflow data
+ * input that needs to be resolved from other actions.
+ */
+function isAuthField(field) {
+    const nameLower = field.name.toLowerCase();
+    const titleLower = field.title.toLowerCase();
+    const descLower = field.description.toLowerCase();
+    return (field.name === "auth" ||
+        field.path.startsWith("auth") ||
+        nameLower === "token" ||
+        nameLower === "accesstoken" ||
+        nameLower === "apikey" ||
+        nameLower === "api_key" ||
+        nameLower === "secret" ||
+        nameLower === "clientsecret" ||
+        nameLower === "client_secret" ||
+        nameLower === "bearertoken" ||
+        nameLower === "bearer_token" ||
+        titleLower.startsWith("authorize") ||
+        titleLower.includes("api key") ||
+        titleLower.includes("oauth") ||
+        titleLower.includes("access token") ||
+        descLower.includes("authorize"));
+}
 function isIdField(field) {
     const n = field.name.toLowerCase();
     return (n === "id" ||
@@ -164,12 +190,9 @@ export function classifyInputs(requiredInputs, entityValues, supportingActions, 
     for (const field of requiredInputs) {
         if (!field.required)
             continue;
-        // Skip auth fields — they are connection-level, not workflow inputs
-        if (field.name === "auth" ||
-            field.path.startsWith("auth") ||
-            field.description.toLowerCase().includes("authorize")) {
+        // Skip auth / credential fields — connection-level config, not workflow data
+        if (isAuthField(field))
             continue;
-        }
         // 1. Try DIRECT resolution from user-supplied values
         const direct = tryDirectClassify(field, entityValues);
         if (direct) {
@@ -249,7 +272,7 @@ export function buildDependencyGraph(primaryAction, classifiedInputs, allActions
         for (const inField of supMeta.inputFields) {
             if (!inField.required)
                 continue;
-            if (inField.name === "auth" || inField.path.startsWith("auth"))
+            if (isAuthField(inField))
                 continue;
             const direct = tryDirectClassify(inField, entityValues);
             if (direct) {
