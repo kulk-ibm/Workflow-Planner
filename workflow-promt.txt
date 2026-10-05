@@ -1,0 +1,24 @@
+
+
+When new task is created in asana in workspace "ABC"
+add label to card in board b15.
+
+
+When a board in updated in trello
+Post Message To Channel "General" in Slack
+
+
+When new task is created in asana in workspace "ABC"
+add label to card in board b15.
+
+
+new file uploaded in box publish message in Queue "ABC" in AMQP 
+
+
+when a new file uploaded in box in folder "/abc", 
+download the file and upload the same file in Dropbox "/123"
+
+
+
+When task is updated in asana in workspace "ABC" upload a file in box "/ab" and 
+post a message in slack channel "General" with message "File created - {Filename}"

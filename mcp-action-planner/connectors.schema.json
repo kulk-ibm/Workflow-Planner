@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Action Planner — Connector Registry",
+  "description": "Defines the shape of connectors.json. Each entry maps a connector name to its platform ID and optional aliases.",
+  "type": "object",
+  "required": ["connectors"],
+  "properties": {
+    "_comment": { "type": "string" },
+    "connectors": {
+      "type": "array",
+      "description": "List of registered connectors available to the planner",
+      "items": {
+        "type": "object",
+        "required": ["name", "enabled"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Exact connector label as it appears on the IBM webMethods platform (case-insensitive match is applied by the planner)"
+          },
+          "id": {
+            "type": "string",
+            "description": "Platform application ID (appId). Leave empty string to trigger auto-discovery via the /applications/{name} API."
+          },
+          "aliases": {
+            "type": "array",
+            "description": "Alternative names a user might use in a natural-language request",
+            "items": { "type": "string" }
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of what this connector does"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Set to false to exclude this connector from planner consideration without removing the entry"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

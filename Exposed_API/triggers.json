@@ -1,0 +1,46 @@
+{
+   "request": {
+      "method": "GET",
+      "url": "https://prod821590.a-yqb-c1.int.ipaas.automation.ibm.com/apis/v2/rest/applications/4ae37a28-f740-42b5-b203-bd0e3a196d5b/triggers",
+      "headers": {
+         "User-Agent": "insomnia/12.1.0",
+         "X-INSTANCE-API-KEY": ""
+      }
+   },
+   "response": {
+      "id": "4ae37a28-f740-42b5-b203-bd0e3a196d5b",
+      "name": "Slack",
+      "label": "Slack",
+      "description": "Slack is a team collaboration tool that lets you communicate in the persistent chat rooms, organized by topic, as well as private groups and direct messaging, where all content is searchable. webMethods CloudStreams Provider for Slack integrates webMethods CloudStreams with Slack",
+      "triggers": [
+         {
+            "id": "/v7/new_message_in_a_private_channel",
+            "name": "new_message_in_a_private_channel",
+            "label": "New Message in a Private Channel",
+            "description": "Trigger when a new message is posted in a private channel",
+            "auths": ["slack_fd50885956"]
+         },
+         {
+            "id": "/v7/new_message_in_a_public_channel",
+            "name": "new_message_in_a_public_channel",
+            "label": "New Message in a Public Channel",
+            "description": "Trigger when a new message is posted in a public channel",
+            "auths": ["slack_fd50885956"]
+         },
+         {
+            "id": "/v7/new_private_channel",
+            "name": "new_private_channel",
+            "label": "New Private Channel",
+            "description": "Trigger when a new private channel is created",
+            "auths": ["slack_fd50885956"]
+         },
+         {
+            "id": "/v7/new_public_channel",
+            "name": "new_public_channel",
+            "label": "New Public Channel",
+            "description": "Trigger when a new public channel is created",
+            "auths": ["slack_fd50885956"]
+         }
+      ]
+   }
+}

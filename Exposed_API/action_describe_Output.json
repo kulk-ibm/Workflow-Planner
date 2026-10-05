@@ -1,0 +1,161 @@
+{
+   "request": {
+      "method": "GET",
+      "url": "https://prod821590.a-yqb-c1.int.ipaas.automation.ibm.com/apis/v2/rest/applications/4ae37a28-f740-42b5-b203-bd0e3a196d5b/actions//v3/post_message_to_channel/describe/output",
+      "headers": {
+         "User-Agent": "insomnia/12.1.0",
+         "X-INSTANCE-API-KEY": ""
+      }
+   },
+   "response": {
+      "title": "Post Message to Channel",
+      "type": "object",
+      "properties": {
+         "channel_type": {
+            "type": "object",
+            "title": "Channel type",
+            "description": "Select the type of channel (Public, Private Group, Direct Messages) you want to send the message to.",
+            "propertyOrder": 2,
+            "oneOf": [
+               {
+                  "title": "Public Channel",
+                  "type": "object",
+                  "properties": {
+                     "channelType": {
+                        "type": "string",
+                        "readonly": true,
+                        "options": {
+                           "hidden": true
+                        },
+                        "enum": ["Public"]
+                     },
+                     "channel": {
+                        "title": "Public Channel ID",
+                        "description": "Specify/select the ID of the public channel you want to send the message to.",
+                        "type": "string",
+                        "minLength": 1,
+                        "propertyOrder": 3,
+                        "lookup": {
+                           "id": "fetch_all_channel",
+                           "enabled": true,
+                           "searchable": false,
+                           "auth": "oauth",
+                           "service": "cli-fbd34e4f-636e-4e9b-a629-e229ce9301a4-1",
+                           "dependencies": ["auth", "$currentLevel$$channelType"]
+                        }
+                     }
+                  }
+               },
+               {
+                  "title": "Private Channel",
+                  "type": "object",
+                  "properties": {
+                     "channelType": {
+                        "type": "string",
+                        "readonly": true,
+                        "options": {
+                           "hidden": true
+                        },
+                        "enum": ["Private"]
+                     },
+                     "channel": {
+                        "title": "Private Channel ID",
+                        "type": "string",
+                        "minLength": 1,
+                        "propertyOrder": 3,
+                        "description": "Specify/select the ID of the private channel you want to send the message to.",
+                        "lookup": {
+                           "id": "fetch_all_channel",
+                           "enabled": true,
+                           "searchable": false,
+                           "auth": "oauth",
+                           "service": "cli-fbd34e4f-636e-4e9b-a629-e229ce9301a4-1",
+                           "dependencies": ["auth", "$currentLevel$$channelType"]
+                        }
+                     }
+                  }
+               },
+               {
+                  "title": "Direct Messages",
+                  "type": "object",
+                  "properties": {
+                     "channelType": {
+                        "type": "string",
+                        "readonly": true,
+                        "options": {
+                           "hidden": true
+                        },
+                        "enum": ["Direct Message"]
+                     },
+                     "channel": {
+                        "title": "Direct Message Channel ID",
+                        "description": "Specify/select the ID of the direct message channel you want to send the message to.",
+                        "type": "string",
+                        "minLength": 1,
+                        "propertyOrder": 3,
+                        "lookup": {
+                           "id": "fetch_all_channel",
+                           "enabled": true,
+                           "searchable": false,
+                           "auth": "oauth",
+                           "service": "cli-fbd34e4f-636e-4e9b-a629-e229ce9301a4-1",
+                           "dependencies": ["auth", "$currentLevel$$channelType"]
+                        }
+                     }
+                  }
+               }
+            ]
+         },
+         "text": {
+            "title": "Message",
+            "description": "Enter the message you want to send to the specified channel ID.",
+            "type": "string",
+            "minLength": 1,
+            "format": "textarea",
+            "propertyOrder": 4
+         },
+         "parse": {
+            "title": "Parse Message?",
+            "description": " Specify/select the formatting behavior of this message. To know more, please visit the following link: <a href='https://api.slack.com/methods/chat.postMessage#formatting' target='_blank'>here</a>",
+            "enum": ["full", "none"],
+            "type": "string",
+            "propertyOrder": 5
+         },
+         "link_names": {
+            "title": "Link Names?",
+            "description": "Specify if you want to find and link channel names and usernames. ",
+            "default": false,
+            "type": "boolean",
+            "propertyOrder": 6
+         },
+         "attachments": {
+            "title": "Attachments",
+            "description": "Enter the attachment(s) you want to include in this message. Note: The value in this field should contain a JSON-encoded array of structured attachments, for example, eg: [{'pretext': 'pre-hello', 'text': 'text-world'}]. To know more, please visit the following link: <a href='https://api.slack.com/docs/attachments.' target='_blank'>here</a>",
+            "type": "string",
+            "propertyOrder": 7,
+            "format": "textarea"
+         },
+         "unfurl_links": {
+            "title": "Unfurl Links",
+            "type": "boolean",
+            "description": "Specify if you want to enable unfurling of primarily text-based content. The default value for this field is true. ",
+            "propertyOrder": 8,
+            "default": true
+         },
+         "unfurl_media": {
+            "title": "Unfurl Media",
+            "description": "Specify if you want to enable unfurling of media content.The default value for this field is false.",
+            "type": "boolean",
+            "default": false,
+            "propertyOrder": 9
+         },
+         "auth": {
+            "title": "Authorize Slack",
+            "type": "string",
+            "minLength": 1,
+            "propertyOrder": 1,
+            "oauth": "slack_fd50885956"
+         }
+      }
+   }
+}

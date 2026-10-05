@@ -1,0 +1,1042 @@
+# Build a Metadata-Driven MCP Server for Dynamic Action Mapping
+
+## Objective
+
+Build an **MCP server** that can analyze a user's natural-language request and dynamically determine which application actions and supporting actions are required to fulfill the request.
+
+The MCP server must use the exposed REST metadata APIs to discover:
+
+* Applications
+* Actions
+* Action input schemas
+* Action output schemas
+* Triggers
+* Trigger input schemas
+* Trigger output schemas
+
+The solution must be **fully metadata-driven**.
+
+Do **not** hardcode application-specific workflows or action dependencies.
+
+---
+
+# 1. Available Metadata APIs
+
+The following APIs are exposed refer to Exposed_API for more details
+
+| # | API            | URL Pattern                                                               | Purpose                   |
+| - | -------------- | ------------------------------------------------------------------------- | ------------------------- |
+| 1 | Application    | `/apis/v2/rest/applications/{name}`                                       | Get application by name   |
+| 2 | Actions        | `/apis/v2/rest/applications/{appId}/actions`                              | List all actions          |
+| 3 | Action Input   | `/apis/v2/rest/applications/{appId}/actions/{actionId}/describe/input`    | Get action input schema   |
+| 4 | Action Output  | `/apis/v2/rest/applications/{appId}/actions/{actionId}/describe/output`   | Get action output schema  |
+| 5 | Triggers       | `/apis/v2/rest/applications/{appId}/triggers`                             | List all triggers         |
+| 6 | Trigger Input  | `/apis/v2/rest/applications/{appId}/triggers/{triggerId}/describe/input`  | Get trigger input schema  |
+| 7 | Trigger Output | `/apis/v2/rest/applications/{appId}/triggers/{triggerId}/describe/output` | Get trigger output schema |
+
+---
+
+# 2. Example User Request
+
+The MCP server should support requests such as:
+
+> Add Green label to card "ABC" in Trello.
+
+The server should dynamically determine:
+
+```text
+Application: Trello
+Intent: Add label to card
+Target entity: Card
+Target identifier: ABC
+Label: Green
+```
+
+It should then discover how this request can be fulfilled using the available Trello metadata.
+
+---
+
+# 3. Application Discovery
+
+First identify the application from the natural-language request.
+
+For:
+
+```text
+Add Green label to card "ABC" in Trello
+```
+
+identify:
+
+```text
+applicationName = Trello
+```
+
+Call:
+
+```http
+GET /apis/v2/rest/applications/Trello
+```
+
+Extract the application ID:
+
+```text
+appId
+```
+
+The MCP server should not assume or hardcode the application ID.
+
+---
+
+# 4. Discover Available Actions
+
+After obtaining the `appId`, call:
+
+```http
+GET /apis/v2/rest/applications/{appId}/actions
+```
+
+Retrieve all available actions.
+
+Example conceptual response:
+
+```json
+{
+  "actions": [
+    {
+      "id": "action1",
+      "name": "Add Label to Card",
+      "description": "Adds a label to an existing card"
+    },
+    {
+      "id": "action2",
+      "name": "Search Card",
+      "description": "Searches for cards"
+    },
+    {
+      "id": "action3",
+      "name": "Search Label",
+      "description": "Searches for labels"
+    }
+  ]
+}
+```
+
+The MCP server should analyze action names and descriptions to identify the action most closely matching the user's intent.
+
+---
+
+# 5. Identify the Primary Action
+
+For:
+
+```text
+Add Green label to card "ABC" in Trello
+```
+
+the primary action should be identified dynamically as:
+
+```text
+Add Label to Card
+```
+
+Do not hardcode:
+
+```text
+"Add label" → "Add Label to Card"
+```
+
+Instead, use:
+
+* Natural-language intent matching
+* Action name
+* Action description
+* Input schema
+* Output schema
+* Semantic similarity
+
+to determine the most appropriate action.
+
+---
+
+# 6. Retrieve Primary Action Input Schema
+
+Once the primary action is identified, call:
+
+```http
+GET /apis/v2/rest/applications/{appId}/actions/{actionId}/describe/input
+```
+
+For example:
+
+```json
+{
+  "fields": [
+    {
+      "name": "boardId",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "listId",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "cardId",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "labelId",
+      "type": "string",
+      "required": true
+    }
+  ]
+}
+```
+
+The MCP server must now determine how each required input can be populated.
+
+---
+
+# 7. Classify Required Inputs
+
+For every required input, classify it as:
+
+```text
+DIRECT
+DERIVED
+RESOLVABLE_BY_ACTION
+MISSING
+AMBIGUOUS
+```
+
+For example:
+
+| Input     | Status     | Source       |
+| --------- | ---------- | ------------ |
+| `boardId` | Resolvable | Search Card  |
+| `listId`  | Resolvable | Search Card  |
+| `cardId`  | Resolvable | Search Card  |
+| `labelId` | Resolvable | Search Label |
+
+The server must not execute the primary action until all required inputs are resolved.
+
+---
+
+# 8. Analyze All Available Actions
+
+For each potentially relevant action, retrieve its input and output schemas.
+
+Input:
+
+```http
+GET /apis/v2/rest/applications/{appId}/actions/{actionId}/describe/input
+```
+
+Output:
+
+```http
+GET /apis/v2/rest/applications/{appId}/actions/{actionId}/describe/output
+```
+
+The MCP server should build an internal metadata model:
+
+```text
+Application
+ └── Actions
+      ├── Action
+      │    ├── Name
+      │    ├── Description
+      │    ├── Inputs
+      │    └── Outputs
+      │
+      └── ...
+```
+
+---
+
+# 9. Dynamic Input/Output Dependency Matching
+
+This is the core functionality.
+
+The MCP server must determine whether the output of one action can satisfy an input of another action.
+
+For example:
+
+### Search Card Output
+
+```json
+{
+  "cards": [
+    {
+      "id": "card123",
+      "name": "ABC",
+      "boardId": "board456",
+      "listId": "list789"
+    }
+  ]
+}
+```
+
+### Add Label to Card Input
+
+```json
+{
+  "boardId": "string",
+  "listId": "string",
+  "cardId": "string",
+  "labelId": "string"
+}
+```
+
+The server should dynamically determine:
+
+```text
+Search Card.cards[].id
+        ↓
+Add Label to Card.cardId
+
+Search Card.cards[].boardId
+        ↓
+Add Label to Card.boardId
+
+Search Card.cards[].listId
+        ↓
+Add Label to Card.listId
+```
+
+This mapping must be derived from the metadata.
+
+---
+
+# 10. Semantic Field Matching
+
+The dependency engine must not depend solely on exact field names.
+
+It should understand equivalent or related fields.
+
+For example:
+
+```text
+cardId
+card_id
+card.id
+id
+Card ID
+identifier
+```
+
+can potentially represent the same semantic value.
+
+Similarly:
+
+```text
+cardName
+card_name
+card.name
+name
+title
+Card Name
+```
+
+can represent a card's name.
+
+The matching algorithm should consider:
+
+1. Field name
+2. Field description
+3. Parent object
+4. Data type
+5. Entity type
+6. Action description
+7. Input/output context
+8. Natural-language semantics
+
+Example:
+
+```text
+Search Card
+Output:
+cards[].id
+
+        ↓ semantic match
+
+Add Label to Card
+Input:
+cardId
+```
+
+should produce:
+
+```text
+cards[].id → cardId
+```
+
+---
+
+# 11. Resolve Card Information
+
+For:
+
+```text
+Add Green label to card "ABC"
+```
+
+the primary action requires:
+
+```text
+cardId
+boardId
+listId
+```
+
+The MCP server should search all available actions for an action whose output can provide these values.
+
+Suppose:
+
+```text
+Search Card
+```
+
+has:
+
+```text
+Input:
+name
+
+Output:
+cards[].id
+cards[].boardId
+cards[].listId
+cards[].name
+```
+
+The MCP server should construct:
+
+```text
+User:
+"ABC"
+
+        ↓
+
+Search Card
+input.name = "ABC"
+
+        ↓
+
+Search Card Output
+
+cards[].name
+cards[].id
+cards[].boardId
+cards[].listId
+
+        ↓
+
+Add Label to Card
+
+cardId  ← cards[].id
+boardId ← cards[].boardId
+listId  ← cards[].listId
+```
+
+---
+
+# 12. Resolve Label Information
+
+If the user specifies:
+
+```text
+Green label
+```
+
+but the primary action requires:
+
+```text
+labelId
+```
+
+the MCP server should find an action capable of resolving:
+
+```text
+label name → label ID
+```
+
+For example:
+
+```text
+Search Label
+```
+
+with:
+
+```text
+Input:
+name = "Green"
+
+Output:
+id
+name
+```
+
+Mapping:
+
+```text
+User:
+Green
+
+        ↓
+
+Search Label
+name = "Green"
+
+        ↓
+
+Search Label.id
+
+        ↓
+
+Add Label to Card.labelId
+```
+
+---
+
+# 13. Build Action Dependency Graph
+
+The server should create an internal dependency graph.
+
+For this request:
+
+```text
+Add Green label to card "ABC" in Trello
+```
+
+the graph should be:
+
+```text
+                     User Request
+                          |
+              +-----------+-----------+
+              |                       |
+              v                       v
+         "ABC" Card              "Green" Label
+              |                       |
+              v                       v
+        Search Card             Search Label
+              |                       |
+        +-----+------+                |
+        |     |      |                |
+        v     v      v                v
+     cardId boardId listId         labelId
+        |     |      |                |
+        +-----+------+----------------+
+                    |
+                    v
+            Add Label to Card
+```
+
+---
+
+# 14. Determine Execution Order
+
+The dependency graph should automatically determine execution order.
+
+Expected result:
+
+```text
+1. Search Card
+2. Search Label
+3. Add Label to Card
+```
+
+However, the server should not assume this ordering.
+
+It should calculate the ordering from dependencies.
+
+For example:
+
+```text
+Action A
+Output → Action B Input
+
+Action B
+Output → Action C Input
+```
+
+should produce:
+
+```text
+A → B → C
+```
+
+If two actions have no dependency on each other:
+
+```text
+A ─────┐
+       ├──→ C
+B ─────┘
+```
+
+they may be executed independently/parallel where supported.
+
+---
+
+# 15. Support Nested Output Schemas
+
+The mapping engine must support nested structures.
+
+Example:
+
+```json
+{
+  "data": {
+    "card": {
+      "id": "123",
+      "board": {
+        "id": "456"
+      }
+    }
+  }
+}
+```
+
+Possible mappings:
+
+```text
+data.card.id
+    →
+cardId
+
+data.card.board.id
+    →
+boardId
+```
+
+---
+
+# 16. Support Arrays
+
+The server must support output arrays.
+
+Example:
+
+```json
+{
+  "cards": [
+    {
+      "id": "123",
+      "name": "ABC"
+    },
+    {
+      "id": "456",
+      "name": "XYZ"
+    }
+  ]
+}
+```
+
+If the user requested:
+
+```text
+card "ABC"
+```
+
+the server should create a selection condition:
+
+```text
+cards[].name == "ABC"
+```
+
+and then resolve:
+
+```text
+cards[].id
+```
+
+as the `cardId`.
+
+---
+
+# 17. Handle Ambiguous Search Results
+
+If:
+
+```text
+Search Card("ABC")
+```
+
+returns:
+
+```text
+ABC - Board 1
+ABC - Board 2
+ABC - Board 3
+```
+
+the MCP server must **not arbitrarily choose one**.
+
+Instead, return:
+
+```text
+Multiple cards named "ABC" were found.
+
+Additional information is required to identify the correct card.
+```
+
+The unresolved dependency should be represented as:
+
+```text
+cardId = AMBIGUOUS
+```
+
+---
+
+# 18. Handle Missing Dependencies
+
+If no available action can resolve an input:
+
+```text
+labelId = UNKNOWN
+```
+
+the MCP server should report:
+
+```text
+Required input "labelId" cannot be resolved using the
+available Trello actions.
+
+Additional user input is required.
+```
+
+Do not invent IDs.
+
+Do not guess IDs.
+
+Do not fabricate action outputs.
+
+---
+
+# 19. Use Triggers Where Relevant
+
+The same metadata-driven mechanism should also understand triggers.
+
+Retrieve triggers using:
+
+```http
+GET /apis/v2/rest/applications/{appId}/triggers
+```
+
+For each relevant trigger, schemas can be retrieved using:
+
+```http
+GET /apis/v2/rest/applications/{appId}/triggers/{triggerId}/describe/input
+```
+
+and:
+
+```http
+GET /apis/v2/rest/applications/{appId}/triggers/{triggerId}/describe/output
+```
+
+Triggers should be incorporated into the metadata graph when they are relevant to a user request.
+
+However, triggers should not be selected merely because they exist. They should only participate when their input/output metadata makes them relevant to the requested workflow.
+
+---
+
+# 20. MCP Tool
+
+Expose a primary MCP tool:
+
+## `analyze_request`
+
+Input:
+
+```json
+{
+  "request": "Add Green label to card ABC in Trello"
+}
+```
+
+The tool should:
+
+```text
+1. Identify application
+2. Retrieve application metadata
+3. Retrieve actions
+4. Identify primary action
+5. Retrieve primary action input schema
+6. Identify missing inputs
+7. Retrieve candidate action output schemas
+8. Match outputs to missing inputs
+9. Build dependency graph
+10. Determine execution order
+11. Detect ambiguity
+12. Produce user-friendly mapping
+```
+
+---
+
+# 21. Expected MCP Response
+
+For:
+
+```text
+Add Green label to card "ABC" in Trello
+```
+
+return a structure similar to:
+
+```json
+{
+  "status": "resolvable",
+  "application": {
+    "name": "Trello",
+    "appId": "..."
+  },
+  "request": "Add Green label to card ABC in Trello",
+  "primaryAction": {
+    "name": "Add Label to Card",
+    "actionId": "..."
+  },
+  "executionPlan": [
+    {
+      "step": 1,
+      "action": "Search Card",
+      "purpose": "Resolve cardId, boardId and listId",
+      "inputs": {
+        "name": "ABC"
+      },
+      "outputs": {
+        "id": "Add Label to Card.cardId",
+        "boardId": "Add Label to Card.boardId",
+        "listId": "Add Label to Card.listId"
+      }
+    },
+    {
+      "step": 2,
+      "action": "Search Label",
+      "purpose": "Resolve labelId",
+      "inputs": {
+        "name": "Green"
+      },
+      "outputs": {
+        "id": "Add Label to Card.labelId"
+      }
+    },
+    {
+      "step": 3,
+      "action": "Add Label to Card",
+      "inputs": {
+        "boardId": "Search Card.boardId",
+        "listId": "Search Card.listId",
+        "cardId": "Search Card.id",
+        "labelId": "Search Label.id"
+      }
+    }
+  ]
+}
+```
+
+---
+
+# 22. Human-Friendly Representation
+
+In addition to structured JSON, the MCP server should be capable of generating a human-readable representation:
+
+```text
+Request:
+Add Green label to card "ABC" in Trello
+
+Plan:
+
+1. Search Card
+   └─ Search for card: ABC
+
+   Resolves:
+   ├─ card.id      → Add Label to Card.cardId
+   ├─ card.boardId → Add Label to Card.boardId
+   └─ card.listId  → Add Label to Card.listId
+
+2. Search Label
+   └─ Search for label: Green
+
+   Resolves:
+   └─ label.id → Add Label to Card.labelId
+
+3. Add Label to Card
+
+   Inputs:
+   ├─ boardId ← Search Card.boardId
+   ├─ listId  ← Search Card.listId
+   ├─ cardId  ← Search Card.id
+   └─ labelId ← Search Label.id
+```
+
+This representation should clearly communicate:
+
+* What action will be executed
+* Why supporting actions are required
+* What each supporting action resolves
+* Where each value comes from
+* How the actions depend on each other
+
+---
+
+# 23. Do Not Hardcode Dependencies
+
+The implementation must **not** contain application-specific logic such as:
+
+```text
+if application == "Trello"
+if action == "Add Label to Card"
+use Search Card
+use Search Label
+```
+
+Instead:
+
+```text
+User Request
+     ↓
+Metadata Discovery
+     ↓
+Action Matching
+     ↓
+Schema Analysis
+     ↓
+Input/Output Semantic Matching
+     ↓
+Dependency Resolution
+     ↓
+Action Graph
+```
+
+The same implementation should work for:
+
+```text
+Trello
+Salesforce
+HubSpot
+Jira
+Slack
+Google Sheets
+Microsoft Teams
+...
+```
+
+without writing application-specific dependency rules.
+
+---
+
+# 24. Caching
+
+Because the metadata APIs may require multiple requests, implement a metadata cache.
+
+Cache:
+
+```text
+Application metadata
+Action metadata
+Action input schemas
+Action output schemas
+Trigger metadata
+Trigger input schemas
+Trigger output schemas
+```
+
+The cache should support invalidation/refresh so changes to application metadata are eventually reflected.
+
+Avoid repeatedly requesting the same schema during a single request analysis.
+
+---
+
+# 25. Recommended Internal Architecture
+
+Use the following logical components:
+
+```text
+                    MCP Client
+                        |
+                        v
+                +---------------+
+                | MCP Server    |
+                +---------------+
+                        |
+                        v
+              Request Analyzer
+                        |
+             +----------+----------+
+             |                     |
+             v                     v
+      Application Resolver    Intent Analyzer
+             |                     |
+             +----------+----------+
+                        |
+                        v
+                 Metadata Manager
+                        |
+             +----------+----------+
+             |                     |
+             v                     v
+       Action Discovery      Schema Discovery
+             |                     |
+             +----------+----------+
+                        |
+                        v
+              Dependency Resolver
+                        |
+                        v
+                Schema Matcher
+                        |
+                        v
+               Dependency Graph
+                        |
+                        v
+                Execution Planner
+                        |
+                        v
+              User-Friendly Plan
+```
+
+---
+
+# 26. Key Design Principle
+
+The MCP server is **not simply an action search engine**.
+
+It is a:
+
+> **Metadata-driven action planning and dependency resolution engine.**
+
+Its primary responsibility is to answer:
+
+> "Given a natural-language request, which action(s) can fulfill it, what inputs do those actions require, and which other available actions can dynamically provide those inputs?"
+
+The final result should therefore describe the complete mapping:
+
+```text
+Natural Language Request
+        ↓
+Application
+        ↓
+Primary Action
+        ↓
+Required Inputs
+        ↓
+Missing Inputs
+        ↓
+Supporting Actions
+        ↓
+Output → Input Mappings
+        ↓
+Dependency Graph
+        ↓
+Execution Order
+        ↓
+Resolvable / Ambiguous / Missing
+```
+
+The implementation should be generic, extensible, metadata-driven, and independent of hardcoded application-specific workflows.

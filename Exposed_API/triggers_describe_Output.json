@@ -1,0 +1,399 @@
+{
+   "request": {
+      "method": "GET",
+      "url": "https://dev6222501.m-yqb-c1.int.ipaas.dev.automation.ibm.com/apis/v2/rest/applications/4ae37a28-f740-42b5-b203-bd0e3a196d5b/triggers//v7/new_message_in_a_private_channel/describe/output",
+      "headers": {
+         "User-Agent": "insomnia/12.1.0",
+         "X-INSTANCE-API-KEY": "azI6ODJmOTEwMmUtYzMxYy00OTM3LTlhYjctMTFhMjJkZjY0NTFkOm1zaFZGekVqVWxWYjd5YlEydUVtMm9lVXpUVXYwQkpmeUo4WDVrWnNCcUk9"
+      }
+   },
+   "response": {
+      "type": "object",
+      "properties": {
+         "event_type": {
+            "title": "event_type",
+            "type": "string",
+            "displayTitle": "Event Type"
+         },
+         "client_msg_id": {
+            "title": "client_msg_id",
+            "type": "string",
+            "displayTitle": "Client Msg ID"
+         },
+         "type": {
+            "title": "type",
+            "type": "string",
+            "displayTitle": "Type"
+         },
+         "subtype": {
+            "title": "subtype",
+            "type": "string",
+            "displayTitle": "Subtype"
+         },
+         "text": {
+            "title": "text",
+            "type": "string",
+            "displayTitle": "Text"
+         },
+         "files": {
+            "title": "files",
+            "type": "array",
+            "displayTitle": "Files",
+            "items": {
+               "type": "object",
+               "properties": {
+                  "id": {
+                     "title": "id",
+                     "type": "string",
+                     "displayTitle": "Files ID"
+                  },
+                  "created": {
+                     "title": "created",
+                     "type": "number",
+                     "displayTitle": "Files Created"
+                  },
+                  "timestamp": {
+                     "title": "timestamp",
+                     "type": "number",
+                     "displayTitle": "Files Timestamp"
+                  },
+                  "name": {
+                     "title": "name",
+                     "type": "string",
+                     "displayTitle": "Files Name"
+                  },
+                  "title": {
+                     "title": "title",
+                     "type": "string",
+                     "displayTitle": "Files Title"
+                  },
+                  "mimetype": {
+                     "title": "mimetype",
+                     "type": "string",
+                     "displayTitle": "Files Mimetype"
+                  },
+                  "filetype": {
+                     "title": "filetype",
+                     "type": "string",
+                     "displayTitle": "Files Filetype"
+                  },
+                  "pretty_type": {
+                     "title": "pretty_type",
+                     "type": "string",
+                     "displayTitle": "Files Pretty Type"
+                  },
+                  "user": {
+                     "title": "user",
+                     "type": "string",
+                     "displayTitle": "Files User"
+                  },
+                  "editable": {
+                     "title": "editable",
+                     "type": "boolean",
+                     "displayTitle": "Files Editable"
+                  },
+                  "size": {
+                     "title": "size",
+                     "type": "number",
+                     "displayTitle": "Files Size"
+                  },
+                  "mode": {
+                     "title": "mode",
+                     "type": "string",
+                     "displayTitle": "Files Mode"
+                  },
+                  "is_external": {
+                     "title": "is_external",
+                     "type": "boolean",
+                     "displayTitle": "Files Is External"
+                  },
+                  "external_type": {
+                     "title": "external_type",
+                     "type": "string",
+                     "displayTitle": "Files External Type"
+                  },
+                  "is_public": {
+                     "title": "is_public",
+                     "type": "boolean",
+                     "displayTitle": "Files Is Public"
+                  },
+                  "public_url_shared": {
+                     "title": "public_url_shared",
+                     "type": "boolean",
+                     "displayTitle": "Files Public URL Shared"
+                  },
+                  "display_as_bot": {
+                     "title": "display_as_bot",
+                     "type": "boolean",
+                     "displayTitle": "Files Display As Bot"
+                  },
+                  "username": {
+                     "title": "username",
+                     "type": "string",
+                     "displayTitle": "Files Username"
+                  },
+                  "preview_highlight": {
+                     "title": "preview_highlight",
+                     "type": "string",
+                     "displayTitle": "Files Preview Highlight"
+                  },
+                  "preview": {
+                     "title": "preview",
+                     "type": "string",
+                     "displayTitle": "Files Preview"
+                  },
+                  "lines": {
+                     "title": "lines",
+                     "type": "string",
+                     "displayTitle": "Files Lines"
+                  },
+                  "lines_more": {
+                     "title": "lines_more",
+                     "type": "number",
+                     "displayTitle": "Files Lines More"
+                  },
+                  "preview_is_truncated": {
+                     "title": "preview_is_truncated",
+                     "type": "boolean",
+                     "displayTitle": "Files Preview Is Truncated"
+                  },
+                  "url_private": {
+                     "title": "url_private",
+                     "type": "string",
+                     "displayTitle": "Files URL Private"
+                  },
+                  "url_private_download": {
+                     "title": "url_private_download",
+                     "type": "string",
+                     "displayTitle": "Files URL Private Download"
+                  },
+                  "thumb_64": {
+                     "title": "thumb_64",
+                     "type": "string",
+                     "displayTitle": "Files Thumb 64"
+                  },
+                  "thumb_80": {
+                     "title": "thumb_80",
+                     "type": "string",
+                     "displayTitle": "Files Thumb 80"
+                  },
+                  "thumb_360": {
+                     "title": "thumb_360",
+                     "type": "string",
+                     "displayTitle": "Files Thumb 360"
+                  },
+                  "thumb_360_w": {
+                     "title": "thumb_360_w",
+                     "type": "number",
+                     "displayTitle": "Files Thumb 360 W"
+                  },
+                  "thumb_360_h": {
+                     "title": "thumb_360_h",
+                     "type": "number",
+                     "displayTitle": "Files Thumb 360 H"
+                  },
+                  "thumb_160": {
+                     "title": "thumb_160",
+                     "type": "string",
+                     "displayTitle": "Files Thumb 160"
+                  },
+                  "original_w": {
+                     "title": "original_w",
+                     "type": "number",
+                     "displayTitle": "Files Original W"
+                  },
+                  "original_h": {
+                     "title": "original_h",
+                     "type": "number",
+                     "displayTitle": "Files Original H"
+                  },
+                  "thumb_tiny": {
+                     "title": "thumb_tiny",
+                     "type": "string",
+                     "displayTitle": "Files Thumb Tiny"
+                  },
+                  "permalink": {
+                     "title": "permalink",
+                     "type": "string",
+                     "displayTitle": "Files Permalink"
+                  },
+                  "permalink_public": {
+                     "title": "permalink_public",
+                     "type": "string",
+                     "displayTitle": "Files Permalink Public"
+                  },
+                  "is_starred": {
+                     "title": "is_starred",
+                     "type": "boolean",
+                     "displayTitle": "Files Is Starred"
+                  },
+                  "has_rich_preview": {
+                     "title": "has_rich_preview",
+                     "type": "boolean",
+                     "displayTitle": "Files Has Rich Preview"
+                  }
+               }
+            }
+         },
+         "bot_id": {
+            "title": "bot_id",
+            "type": "string",
+            "displayTitle": "Bot ID"
+         },
+         "user": {
+            "title": "user",
+            "type": "string",
+            "displayTitle": "User"
+         },
+         "ts": {
+            "title": "ts",
+            "type": "string",
+            "displayTitle": "Ts"
+         },
+         "ts_ISO": {
+            "title": "ts_ISO",
+            "type": "string",
+            "displayTitle": "Ts Iso"
+         },
+         "team": {
+            "title": "team",
+            "type": "string",
+            "displayTitle": "Team"
+         },
+         "blocks": {
+            "title": "blocks",
+            "type": "array",
+            "displayTitle": "Blocks",
+            "items": {
+               "type": "object",
+               "properties": {
+                  "type": {
+                     "title": "type",
+                     "type": "string",
+                     "displayTitle": "Blocks Type"
+                  },
+                  "block_id": {
+                     "title": "block_id",
+                     "type": "string",
+                     "displayTitle": "Blocks Block ID"
+                  },
+                  "elements": {
+                     "title": "elements",
+                     "type": "array",
+                     "displayTitle": "Blocks Elements",
+                     "items": {
+                        "type": "object",
+                        "properties": {
+                           "type": {
+                              "title": "type",
+                              "type": "string",
+                              "displayTitle": "Blocks Elements Type"
+                           },
+                           "elements": {
+                              "title": "elements",
+                              "type": "array",
+                              "displayTitle": "Blocks Elements Elements",
+                              "items": {
+                                 "type": "object",
+                                 "properties": {
+                                    "type": {
+                                       "title": "type",
+                                       "type": "string",
+                                       "displayTitle": "Blocks Elements Elements Type"
+                                    },
+                                    "text": {
+                                       "title": "text",
+                                       "type": "string",
+                                       "displayTitle": "Blocks Elements Elements Text"
+                                    }
+                                 }
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         },
+         "bot_profile": {
+            "title": "bot_profile",
+            "type": "object",
+            "displayTitle": "Bot Profile",
+            "properties": {
+               "id": {
+                  "title": "id",
+                  "type": "string",
+                  "displayTitle": "Bot Profile ID"
+               },
+               "deleted": {
+                  "title": "deleted",
+                  "type": "boolean",
+                  "displayTitle": "Bot Profile Deleted"
+               },
+               "name": {
+                  "title": "name",
+                  "type": "string",
+                  "displayTitle": "Bot Profile Name"
+               },
+               "updated": {
+                  "title": "updated",
+                  "type": "number",
+                  "displayTitle": "Bot Profile Updated"
+               },
+               "app_id": {
+                  "title": "app_id",
+                  "type": "string",
+                  "displayTitle": "Bot Profile App ID"
+               },
+               "icons": {
+                  "title": "icons",
+                  "type": "object",
+                  "displayTitle": "Bot Profile Icons",
+                  "properties": {
+                     "image_36": {
+                        "title": "image_36",
+                        "type": "string",
+                        "displayTitle": "Bot Profile Icons Image 36"
+                     },
+                     "image_48": {
+                        "title": "image_48",
+                        "type": "string",
+                        "displayTitle": "Bot Profile Icons Image 48"
+                     },
+                     "image_72": {
+                        "title": "image_72",
+                        "type": "string",
+                        "displayTitle": "Bot Profile Icons Image 72"
+                     }
+                  }
+               },
+               "team_id": {
+                  "title": "team_id",
+                  "type": "string",
+                  "displayTitle": "Bot Profile Team ID"
+               }
+            }
+         },
+         "upload": {
+            "title": "upload",
+            "type": "boolean",
+            "displayTitle": "Upload"
+         },
+         "display_as_bot": {
+            "title": "display_as_bot",
+            "type": "boolean",
+            "displayTitle": "Display As Bot"
+         },
+         "inviter": {
+            "title": "inviter",
+            "type": "string",
+            "displayTitle": "Inviter"
+         },
+         "user_name": {
+            "title": "user_name",
+            "type": "string",
+            "displayTitle": "User Name"
+         }
+      }
+   }
+}

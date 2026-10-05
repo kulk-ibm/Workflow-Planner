@@ -1,0 +1,74 @@
+{
+   "request": {
+      "method": "GET",
+      "url": "https://prod989056.a-vir-r1.int.ipaas.automation.ibm.com/apis/v2/rest/applications/ae5dc465-75fb-487d-80c0-0b56a7643c19/actions",
+      "headers": {
+         "User-Agent": "insomnia/12.1.0",
+         "X-INSTANCE-API-KEY": ""
+      }
+   },
+   "response": {
+      "id": "ae5dc465-75fb-487d-80c0-0b56a7643c19",
+      "name": "Hugging Face",
+      "label": "Hugging Face",
+      "description": "Hugging Face AI platform connector for text generation, inference, and datasets",
+      "actions": [
+         {
+            "id": "/v1/chat_completion",
+            "name": "chat_completion",
+            "label": "Chat Completion",
+            "description": "Generate chat completions using Hugging Face conversational models",
+            "auths": []
+         },
+         {
+            "id": "/v1/text_generation",
+            "name": "text_generation",
+            "label": "Text Generation",
+            "description": "Generate text using Hugging Face models",
+            "auths": []
+         },
+         {
+            "id": "/v1/sentiment_analysis",
+            "name": "sentiment_analysis",
+            "label": "Sentiment Analysis",
+            "description": "Analyze sentiment of text using Hugging Face Chat models via Router API",
+            "auths": []
+         },
+         {
+            "id": "/v1/question_answering",
+            "name": "question_answering",
+            "label": "Question Answering",
+            "description": "Answer questions based on context using Hugging Face Chat models via Router API",
+            "auths": []
+         },
+         {
+            "id": "/v1/summarization",
+            "name": "summarization",
+            "label": "Text Summarization",
+            "description": "Summarize long text using Hugging Face Chat models via Router API",
+            "auths": []
+         },
+         {
+            "id": "/v1/translation",
+            "name": "translation",
+            "label": "Text Translation",
+            "description": "Translate text between languages using Hugging Face Chat models via Router API",
+            "auths": []
+         },
+         {
+            "id": "/v1/list_datasets",
+            "name": "list_datasets",
+            "label": "List Datasets",
+            "description": "List datasets from Hugging Face Hub",
+            "auths": []
+         },
+         {
+            "id": "/v1/get_dataset_info",
+            "name": "get_dataset_info",
+            "label": "Get Dataset Info",
+            "description": "Get detailed information about a specific dataset",
+            "auths": []
+         }
+      ]
+   }
+}
